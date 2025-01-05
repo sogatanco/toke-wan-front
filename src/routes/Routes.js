@@ -24,7 +24,7 @@ const Routes = () => {
         return;
       }
 
-      const response = await axios.get('http://127.0.0.1:8000/api/user', {
+      const response = await axios.get(`${process.env.REACT_APP_BASE_URL}api/user`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -64,7 +64,8 @@ const Routes = () => {
 
     // Jika role yang diinginkan tidak ada di dalam userRole (array), redirect ke login
     if (role && !userRole.includes(role)) {
-      return <Navigate to="/login" />;
+      alert('Anda tidak memiliki akses ke halaman ini.');
+      return <Navigate to="/" />;
     }
 
     // Jika semua kondisi lulus, tampilkan halaman yang diminta
@@ -93,7 +94,7 @@ const Routes = () => {
       <Route
         path="/kasir"
         element={
-          <ProtectedRoute role="admin">
+          <ProtectedRoute role="kasir">
             <Kasir />
           </ProtectedRoute>
         }

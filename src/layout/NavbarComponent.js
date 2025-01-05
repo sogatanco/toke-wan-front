@@ -37,7 +37,7 @@ const NavbarComponent = ({ userName }) => {
         {/* Gambar Logo Warkop */}
         <img src="https://i.pinimg.com/originals/74/26/cf/7426cf05ffe331b889b1459cd0005054.png" alt="Warkop Seramoe" style={{ width: '60px', height: '60px', marginRight: '10px' }} />
         {/* Teks Warkop Seramoe */}
-        <span style={{ fontSize: '20px', fontWeight: '600' }}>Warkop Seramoe</span>
+        <span style={{ fontSize: '20px', fontWeight: '600' }}>Seuramoe Aceh</span>
       </NavbarBrand>
       
       <Nav className="ml-auto" navbar>

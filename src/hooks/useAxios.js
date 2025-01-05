@@ -6,7 +6,7 @@ const useAxios = () => {
 
   // Buat instance axios
   const api = axios.create({
-    baseURL: 'http://127.0.0.1:8000/api', // Ganti dengan base URL API Anda
+    baseURL: `${process.env.REACT_APP_BASE_URL}api`, // Ganti dengan base URL API Anda
     withCredentials: true,
   });
 

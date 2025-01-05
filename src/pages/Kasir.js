@@ -1,25 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import useAxios from '../hooks/useAxios'; // Import useAxios
 import { Container, Row, Col, Card, CardBody, CardTitle, CardImg, Button, ListGroup, ListGroupItem, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-
-const productsData = [
-    { id: 1, name: 'Produk A', price: 5000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 2, name: 'Produk B', price: 10000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 3, name: 'Produk C', price: 15000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 4, name: 'Produk D', price: 20000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 5, name: 'Produk E', price: 25000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 6, name: 'Produk F', price: 30000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 7, name: 'Produk G', price: 35000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 8, name: 'Produk H', price: 40000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 9, name: 'Produk F', price: 30000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 10, name: 'Produk G', price: 35000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 11, name: 'Produk H', price: 40000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 12, name: 'Produk G', price: 35000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 13, name: 'Produk H', price: 40000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 14, name: 'Produk G', price: 35000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 15, name: 'Produk H', price: 40000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 16, name: 'Produk G', price: 35000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-    { id: 17, name: 'Produk H', price: 40000, image: 'https://ketahananpangan.semarangkota.go.id/v3/content/images/kopi%20%281%29.jpg' },
-];
+import { AiOutlineDelete } from 'react-icons/ai'; // Import trash icon from react-icons
 
 const Kasir = () => {
     const [cart, setCart] = useState([]);
@@ -28,6 +11,19 @@ const Kasir = () => {
     const [payment, setPayment] = useState('');
     const [change, setChange] = useState(null);
 
+    const api = useAxios(); // Get the axios instance from useAxios
+
+    // Fetch products using useQuery with Axios (Updated to v5 format)
+    const { data: products, isLoading, isError } = useQuery({
+        queryKey: ['products'], // The unique key for the query
+        queryFn: async () => {
+            const response = await api.get('/products_active'); // Use your endpoint
+            return response.data.data;
+        },
+        retry: 2, // Optional: Retry fetching on failure
+    });
+
+    // Add to cart logic
     const addToCart = (product) => {
         setCart((prevCart) => {
             const existingProduct = prevCart.find((item) => item.id === product.id);
@@ -41,15 +37,17 @@ const Kasir = () => {
         });
     };
 
-    const calculateTotal = () => {
-        return cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    const removeFromCart = (productId) => {
+        setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
     };
 
-    const filteredProducts = productsData.filter((product) =>
-        product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const calculateTotal = () => {
+        return cart.reduce((total, item) => total + item.harga_jual * item.quantity, 0);
+    };
 
-    
+    const filteredProducts = products?.filter((product) =>
+        product.nama.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const handleNumberClick = (num) => {
         setPayment((prevPayment) => prevPayment * 10 + num);
@@ -59,14 +57,54 @@ const Kasir = () => {
         setPayment(Math.floor(payment / 10));
     };
 
-
-    useEffect(() => {
-        
+    const simpanTransaksi = async () => {
+        try {
+            // Periksa apakah keranjang kosong
+            if (cart.length === 0) {
+                alert('Keranjang belanja kosong! Tambahkan produk terlebih dahulu.');
+                return;
+            }
+    
+            // Format data transaksi
+            const transactionData = {
+                products: cart.map((item) => ({
+                    id: item.id,
+                    harga_jual: item.harga_jual,
+                    quantity: item.quantity,
+                })),
+            };
+    
+            // Simpan transaksi ke API
+            const response = await api.post('/transactions', transactionData);
+    
+            // Tampilkan pesan sukses
+            alert(`Transaksi berhasil disimpan dengan ID: ${response.data.transaction_id}`);
+    
+            // Reset keranjang dan pembayaran
+            setCart([]);
+            setPayment('');
+            setChange(null);
+        } catch (error) {
+            console.error('Error saat menyimpan transaksi:', error);
+            alert('Gagal menyimpan transaksi. Silakan coba lagi.');
+        }
+    };
+    
+    // Update the change based on payment amount
+    React.useEffect(() => {
         const total = calculateTotal();
         if (payment && payment >= total) {
             setChange(payment - total);
         } 
-    },[payment]);
+    }, [payment]);
+
+    if (isLoading) {
+        return <div>Loading...</div>;
+    }
+
+    if (isError) {
+        return <div>Error fetching products!</div>;
+    }
 
     return (
         <Container fluid className="d-flex flex-column p-5" style={{ minHeight: '80vh' }}>
@@ -87,12 +125,20 @@ const Kasir = () => {
                     <div style={styles.productListWrapper}>
                         <Row className="w-100">
                             {filteredProducts.map((product) => (
-                                <Col key={product.id} md="3" lg="2" sm="4" xs="6" className="mb-4">
+                                <Col key={product.id} md="3" lg="3" sm="4" xs="6" className="mb-4">
                                     <Card style={styles.card} onClick={() => addToCart(product)}>
-                                        <CardImg top width="100%" src={product.image} alt={product.name} />
+                                        <CardImg 
+                                            top 
+                                            width="100%" 
+                                            src={`${process.env.REACT_APP_BASE_URL}storage/${product.gambar}`} 
+                                            alt={product.nama} 
+                                            style={styles.cardImage} 
+                                        />
                                         <CardBody>
-                                            <CardTitle tag="h5">{product.name}</CardTitle>
-                                            <p>Rp {product.price.toLocaleString()}</p>
+                                            <CardTitle tag="h5" style={styles.cardTitle}>
+                                                {product.nama.length > 20 ? `${product.nama.substring(0, 20)}...` : product.nama}
+                                            </CardTitle>
+                                            <p>Rp {Number(product.harga_jual).toLocaleString()}</p>
                                             <Button style={styles.button} block>
                                                 Tambah
                                             </Button>
@@ -110,9 +156,19 @@ const Kasir = () => {
                         <ListGroup>
                             {cart.map((item) => (
                                 <ListGroupItem key={item.id} style={styles.cartItem}>
-                                    <div className="d-flex justify-content-between">
-                                        <span>{item.name} (x{item.quantity})</span>
-                                        <span>Rp {(item.price * item.quantity).toLocaleString()}</span>
+                                    <div className="d-flex justify-content-between align-items-center">
+                                        <div style={{ flex: 1 }}>
+                                            <span>{item.nama} (x{item.quantity})</span>
+                                            <span>Rp {(item.harga_jual * item.quantity).toLocaleString()}</span>
+                                        </div>
+                                        <Button 
+                                            color="danger" 
+                                            size="sm" 
+                                            onClick={() => removeFromCart(item.id)}
+                                            style={styles.removeButton}
+                                        >
+                                            <AiOutlineDelete size={20} />
+                                        </Button>
                                     </div>
                                 </ListGroupItem>
                             ))}
@@ -121,53 +177,14 @@ const Kasir = () => {
                         <div style={styles.total}>
                             <h5>Total Harga: Rp {calculateTotal().toLocaleString()}</h5>
                         </div>
-                        <Button color="success" block onClick={() => setModalOpen(true)}>
+                        <Button color="success" block onClick={() => simpanTransaksi()}>
                             Bayar
                         </Button>
                     </div>
                 </Col>
             </Row>
 
-            <Modal isOpen={modalOpen} toggle={() => setModalOpen(!modalOpen)}>
-                <ModalHeader toggle={() => setModalOpen(!modalOpen)} className='calculator-font'>Pembayaran</ModalHeader>
-                <ModalBody>
-                    <Input
-                        type="text"
-                        value={payment.toLocaleString()}
-                        onChange={(e) => setPayment(Number(e.target.value.replace(/[^0-9]/g, '')))}
-                        style={styles.paymentInput}
-                    />
-                    {change !== null && (
-                        <div style={styles.changeWrapper}>
-                            <h5>Kembalian: Rp {change.toLocaleString()}</h5>
-                        </div>
-                    )}
-
-                    <div style={styles.calculator}>
-                        {[7, 8, 9, 4, 5, 6, 1, 2, 3, 0].map((num) => (
-                            <Button
-                                key={num}
-                                onClick={() => handleNumberClick(num)}
-                                style={num === 0 ? styles.numButtonLarge : styles.numButton}
-                                color="primary"
-                            >
-                                {num}
-                            </Button>
-                        ))}
-                        <Button onClick={handleDelete} style={styles.numButton} color="danger">
-                            Del
-                        </Button>
-                    </div>
-                </ModalBody>
-                <ModalFooter>
-                    <Button color="primary" >
-                        Proses Pembayaran
-                    </Button>
-                    <Button color="secondary" onClick={() => setModalOpen(false)}>
-                        Batal
-                    </Button>
-                </ModalFooter>
-            </Modal>
+            
         </Container>
     );
 };
@@ -186,6 +203,15 @@ const styles = {
         backgroundColor: '#fff',
         cursor: 'pointer',
     },
+    cardImage: {
+        height: '110px',
+        objectFit: 'cover',
+    },
+    cardTitle: {
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+    },
     button: {
         marginTop: '10px',
         borderRadius: '20px',
@@ -201,6 +227,16 @@ const styles = {
     },
     cartItem: {
         padding: '10px',
+    },
+    removeButton: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        backgroundColor: '#dc3545',
+        color: 'white',
     },
     total: {
         marginTop: '10px',

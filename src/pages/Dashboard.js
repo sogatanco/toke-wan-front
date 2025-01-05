@@ -16,7 +16,7 @@ const Dashboard = () => {
             <Card style={styles.card} onClick={()=>navigate('/kasir')} >
               <CardBody style={styles.cardBody}>
                 <FaCashRegister size={70} style={styles.kasirIcon} />
-                <CardTitle tag="h5" style={styles.cardTitle}>Kasir</CardTitle>
+                <CardTitle tag="h5" style={styles.cardTitle}>Cashier</CardTitle>
                 <Button style={styles.kasirButton} block>Go</Button>
               </CardBody>
             </Card>
@@ -27,7 +27,7 @@ const Dashboard = () => {
             <Card style={styles.card}>
               <CardBody style={styles.cardBody}>
                 <FaFileAlt size={70} style={styles.laporanIcon} />
-                <CardTitle tag="h5" style={styles.cardTitle}>Laporan</CardTitle>
+                <CardTitle tag="h5" style={styles.cardTitle}>Reports</CardTitle>
                 <Button style={styles.laporanButton} block>Go</Button>
               </CardBody>
             </Card>
@@ -40,14 +40,14 @@ const Dashboard = () => {
             <Card style={styles.card}  onClick={()=>navigate('/tambah-produk')} >
               <CardBody style={styles.cardBody}>
                 <FaBoxes size={70} style={styles.barangIcon} />
-                <CardTitle tag="h5" style={styles.cardTitle}>Barang</CardTitle>
+                <CardTitle tag="h5" style={styles.cardTitle}>Products</CardTitle>
                 <Button style={styles.barangButton} block>Go</Button>
               </CardBody>
             </Card>
           </Col>
 
           {/* Setting Button */}
-          <Col md="4" sm="6" lg="3" xl="2" xs="6" className="p-4">
+          {/* <Col md="4" sm="6" lg="3" xl="2" xs="6" className="p-4">
             <Card style={styles.card}  onClick={()=>navigate('/users')} >
               <CardBody style={styles.cardBody}>
                 <FaCog size={70} style={styles.settingIcon} />
@@ -55,7 +55,7 @@ const Dashboard = () => {
                 <Button style={styles.settingButton} block>Go</Button>
               </CardBody>
             </Card>
-          </Col>
+          </Col> */}
         </Row>
       </Container>
     </>
