@@ -1,5 +1,4 @@
 import React, { useState} from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Form, FormGroup, Label, Input, Button, Alert, Spinner, Container, Row, Col } from 'reactstrap';
 import axios from 'axios';
 
@@ -7,8 +6,7 @@ import axios from 'axios';
 const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const navigate = useNavigate();  // Menambahkan navigate
+  const [error, setError] = useState('');  // Menambahkan navigate
   const [loading, setLoading] = useState(false);
 
 
@@ -18,7 +16,7 @@ const LoginForm = () => {
 
     e.preventDefault();
     try {
-        const response = await axios.post('http://127.0.0.1:8000/api/login', {
+        const response = await axios.post(`${ process.env.REACT_APP_BASE_URL}api/login`, {
             email,
             password,
         });

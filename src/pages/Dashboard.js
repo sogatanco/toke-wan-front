@@ -1,6 +1,6 @@
 import React from 'react';
 import { Container, Row, Col, Card, CardBody, CardTitle, Button } from 'reactstrap';
-import { FaCashRegister, FaFileAlt, FaBoxes, FaCog } from 'react-icons/fa';
+import { FaCashRegister, FaFileAlt, FaBoxes} from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -24,7 +24,7 @@ const Dashboard = () => {
 
           {/* Laporan Button */}
           <Col md="4" sm="6" lg="3" xl="2" xs="6" className="p-4">
-            <Card style={styles.card}>
+            <Card style={styles.card} onClick={()=>navigate('/laporan')}>
               <CardBody style={styles.cardBody}>
                 <FaFileAlt size={70} style={styles.laporanIcon} />
                 <CardTitle tag="h5" style={styles.cardTitle}>Reports</CardTitle>

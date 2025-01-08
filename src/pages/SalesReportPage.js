@@ -1,244 +1,369 @@
 import React, { useState, useEffect } from "react";
 import {
-  Card,
-  CardBody,
-  CardTitle,
-  Row,
-  Col,
-  Button,
-  Container,
-} from "reactstrap";
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
 import { Bar } from "react-chartjs-2";
+import { Row, Col, Input, Card, CardBody } from "reactstrap";
 import DataTable from "react-data-table-component";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import useAxios from "../hooks/useAxios";
 
-// Importing necessary components from chart.js
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-
-// Register Chart.js components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const SalesReportPage = () => {
-  // State for data
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedMonth, setSelectedMonth] = useState(new Date());
-  const [startDateTransactions, setStartDateTransactions] = useState(new Date());
-  const [endDateTransactions, setEndDateTransactions] = useState(new Date());
-  const [startDateItems, setStartDateItems] = useState(new Date());
-  const [endDateItems, setEndDateItems] = useState(new Date());
+  const [data, setData] = useState({
+    total_transaksi_all: 0,
+    total_transaksi_this_week: 0,
+    total_transaksi_today: 0,
+    total_transactions_today_count: 0,
+  });
 
-  // Data Dummy for Transactions
-  const transactionsDummyData = [
-    { id: 1, date: "2025-01-01", total: 50000 },
-    { id: 2, date: "2025-01-02", total: 35000 },
-    { id: 3, date: "2025-01-03", total: 120000 },
-    { id: 4, date: "2025-01-04", total: 45000 },
-    { id: 5, date: "2025-01-05", total: 60000 },
-    { id: 6, date: "2025-01-06", total: 95000 },
-    { id: 7, date: "2025-01-07", total: 70000 },
-    { id: 8, date: "2025-01-08", total: 55000 },
-    { id: 9, date: "2025-01-09", total: 30000 },
-    { id: 10, date: "2025-01-10", total: 85000 },
-  ];
+  const [totalBulan, setTotalBulan] = useState(0);
+  const [barChartData, setBarChartData] = useState({
+    labels: [],
+    datasets: [],
+  });
 
-  const itemTransactionsDummyData = [
-    { itemName: "Laptop", quantity: 10, total: 1000000 },
-    { itemName: "Smartphone", quantity: 20, total: 400000 },
-    { itemName: "Headphone", quantity: 15, total: 225000 },
-    { itemName: "Keyboard", quantity: 25, total: 125000 },
-    { itemName: "Mouse", quantity: 30, total: 90000 },
-    { itemName: "Monitor", quantity: 5, total: 750000 },
-    { itemName: "Charger", quantity: 50, total: 50000 },
-    { itemName: "Webcam", quantity: 10, total: 200000 },
-    { itemName: "Tablet", quantity: 8, total: 1600000 },
-    { itemName: "Speaker", quantity: 12, total: 60000 },
-  ];
+  const [selectedMonth, setSelectedMonth] = useState(1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
-  // State for storing transaction data
-  const [transactions, setTransactions] = useState(transactionsDummyData);
-  const [itemTransactions, setItemTransactions] = useState(itemTransactionsDummyData);
+  const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString());
 
-  // Dummy data for sales summary
-  const salesSummary = {
-    today: 150,
-    yesterday: 120,
-    thisWeek: 800,
-    thisMonth: 3000,
-  };
-
-  const salesPerHourData = {
-    labels: Array.from({ length: 24 }, (_, i) => `${i}:00`),
-    datasets: [
-      {
-        label: "Penjualan per Jam",
-        data: Array.from({ length: 24 }, () => Math.floor(Math.random() * 50)),
-        backgroundColor: "#4CAF50",
-      },
-    ],
-  };
-
-  const salesPerDayData = {
-    labels: Array.from({ length: 30 }, (_, i) => `Hari ${i + 1}`),
-    datasets: [
-      {
-        label: "Penjualan per Hari",
-        data: Array.from({ length: 30 }, () => Math.floor(Math.random() * 200)),
-        backgroundColor: "#2196F3",
-      },
-    ],
-  };
-
-  // Columns for transactions table
-  const columns = [
-    { name: "ID Transaksi", selector: (row) => row.id, sortable: true },
-    { name: "Tanggal", selector: (row) => row.date, sortable: true },
-    { name: "Total", selector: (row) => row.total, sortable: true },
-  ];
-
-  const itemColumns = [
-    { name: "Nama Barang", selector: (row) => row.itemName, sortable: true },
-    { name: "Jumlah Terjual", selector: (row) => row.quantity, sortable: true },
-    { name: "Total", selector: (row) => row.total, sortable: true },
-  ];
-
-  // Custom DatePicker Component
-  const CustomDatePicker = ({ selected, onChange, placeholder, isMonthPicker }) => (
-    <DatePicker
-      selected={selected}
-      onChange={onChange}
-      dateFormat={isMonthPicker ? "MM/yyyy" : "yyyy-MM-dd"}
-      showMonthYearPicker={isMonthPicker}
-      placeholderText={placeholder}
-      className="ms-2"
-    />
-  );
+  const api = useAxios();
 
   useEffect(() => {
-    // Ensure to destroy chart instances before creating a new one
-    const ctxHour = document.getElementById('salesPerHourChart').getContext('2d');
-    const ctxDay = document.getElementById('salesPerDayChart').getContext('2d');
+    const fetchData = async () => {
+      try {
+        const response = await api.get('total-all');
+        const { total_transaksi_all, total_transaksi_this_week, total_transaksi_today, total_transactions_today_count } = response.data;
 
-    const chartHour = new ChartJS(ctxHour, {
-      type: 'bar',
-      data: salesPerHourData,
-      options: {
-        responsive: true,
-        plugins: {
-          title: {
-            display: true,
-            text: 'Penjualan Per Jam',
-          },
-        },
-      },
-    });
+        setData({
+          total_transaksi_all: total_transaksi_all,
+          total_transaksi_this_week: total_transaksi_this_week,
+          total_transaksi_today: total_transaksi_today,
+          total_transactions_today_count: total_transactions_today_count,
+        });
 
-    const chartDay = new ChartJS(ctxDay, {
-      type: 'bar',
-      data: salesPerDayData,
-      options: {
-        responsive: true,
-        plugins: {
-          title: {
-            display: true,
-            text: 'Penjualan Per Hari',
-          },
-        },
-      },
-    });
+        const fetchChartData = await api.get(
+          `total-transaksi/${selectedMonth}/${selectedYear}`
+        );
+        const { days, total_transaksi } = fetchChartData.data;
+        const totalTransaksiBulanIni = total_transaksi
+          .map((item) => parseFloat(item))
+          .reduce((total, currentValue) => total + currentValue, 0);
 
-    // Cleanup charts on unmount
-    return () => {
-      chartHour.destroy();
-      chartDay.destroy();
+        const formattedTotal = new Intl.NumberFormat('id-ID', {
+          style: 'currency',
+          currency: 'IDR',
+        }).format(totalTransaksiBulanIni);
+        setTotalBulan(formattedTotal);
+
+        setBarChartData({
+          labels: days,
+          datasets: [
+            {
+              label: "Total Transaksi Per Hari",
+              data: total_transaksi,
+              borderColor: "#4CAF50",
+              backgroundColor: "#4CAF50",
+              borderWidth: 1,
+              hoverBackgroundColor: "#388E3C",
+              barThickness: 15,
+            },
+          ],
+        });
+
+        const tableDataResponse = await api.get(`/transactions?date=${new Date(selectedDate).toISOString().split("T")[0]}`);
+        setTransactions(tableDataResponse.data.data);
+        setFilteredTransactions(tableDataResponse.data.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
     };
-  }, [salesPerHourData, salesPerDayData]);
+
+    fetchData();
+  }, [selectedMonth, selectedYear, selectedDate]);
+
+  const handleSearch = (event) => {
+    const value = event.target.value;
+    setSearchTerm(value);
+
+    const filtered = transactions.filter((item) =>
+      item.product_name.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredTransactions(filtered);
+  };
+
+  const handleMonthChange = (event) => {
+    setSelectedMonth(Number(event.target.value));
+  };
+
+  const handleYearChange = (event) => {
+    setSelectedYear(event.target.value);
+  };
+
+  const styles = {
+    container: {
+      padding: "20px",
+    },
+    cardContainer: {
+      display: "flex",
+      justifyContent: "space-around",
+      marginTop: "20px",
+    },
+    card: {
+      position: "relative",
+      backgroundColor: "#fff",
+      color: "#fff",
+      padding: "20px",
+      borderRadius: "10px",
+      flex: 1,
+      margin: "10px",
+      textAlign: "center",
+      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+      overflow: "visible",
+    },
+    cardIcon: {
+      position: "absolute",
+      top: "-35px",
+      left: "50%",
+      transform: "translateX(-50%)",
+      fontSize: "3rem",
+      zIndex: 10,
+      backgroundColor: "#fff",
+      borderRadius: "50%",
+      border: "6px solid",
+      padding: "15px",
+    },
+    cardTitle: {
+      fontSize: "1.5rem",
+      margin: "10px 0",
+    },
+    cardValue: {
+      fontSize: "1.2rem",
+      fontWeight: "bold",
+    },
+    chartContainer: {
+      display: "flex",
+      marginTop: "40px",
+      height: "500px",
+    },
+    chartWrapper: {
+      flex: 1,
+      display: "flex",
+      flexDirection: "column",
+      height: "100%",
+    },
+    barChartContainer: {
+      flex: 1,
+      padding: "10px",
+      marginRight: "20px",
+      backgroundColor: "#fff",
+      borderRadius: "10px",
+      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+      display: "flex",
+      flexDirection: "column",
+    },
+    barChartFilter: {
+      display: "flex",
+      justifyContent: "space-between",
+      marginBottom: "20px",
+      padding: "0 10px",
+    },
+    select: {
+      padding: "8px 15px",
+      fontSize: "1rem",
+      borderRadius: "5px",
+      border: "1px solid #ccc",
+      boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+    },
+  };
+
+  const currentYear = new Date().getFullYear();
+  const years = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+
+  const tableColumns = [
+    {
+      name: "Waktu Transaksi", selector: (row) =>(
+      
+        `${new Date(row.created_at).toLocaleDateString("id-ID", {
+        weekday: 'long',  // Menampilkan nama hari (Senin, Selasa, dst)
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })} ${new Date(row.created_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}`
+        
+      ) , sortable: true
+    },
+    { name: "Nama Produk", selector: (row) => row.product_name, sortable: true },
+    { name: "Quantity", selector: (row) => row.jumlah_produk, sortable: true },
+    { name: "Harga / Produk", selector: (row) => `Rp ${row.harga_per_item.toLocaleString("id-ID")}`, sortable: true },
+    { name: "Total Harga", selector: (row) => `Rp ${row.total_harga.toLocaleString("id-ID")}`, sortable: true },
+  ];
 
   return (
-    <Container className="p-4">
-      <h3>Laporan Penjualan</h3>
-
-      {/* Sales Summary Cards */}
-      <Row className="mb-4">
-        {Object.entries(salesSummary).map(([key, value], index) => (
-          <Col md={3} key={index}>
-            <Card className="text-center shadow">
-              <CardBody>
-                <CardTitle tag="h5">{key.replace(/([A-Z])/g, " $1").trim()}</CardTitle>
-                <h3>{value}</h3>
-              </CardBody>
-            </Card>
-          </Col>
-        ))}
-      </Row>
-
-      {/* Chart Per Jam */}
-      <div className="mb-5">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5>Penjualan Per Jam</h5>
-          <CustomDatePicker
-            selected={selectedDate}
-            onChange={setSelectedDate}
-            placeholder="Pilih Tanggal"
-          />
-        </div>
-        <canvas id="salesPerHourChart"></canvas>
-      </div>
-
-      {/* Chart Per Hari */}
-      <div className="mb-5">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5>Penjualan Per Hari</h5>
-          <CustomDatePicker
-            selected={selectedMonth}
-            onChange={setSelectedMonth}
-            placeholder="Pilih Bulan"
-            isMonthPicker
-          />
-        </div>
-        <canvas id="salesPerDayChart"></canvas>
-      </div>
-
-      {/* Transactions Per Hari */}
-      <div className="mb-5">
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5>Daftar Transaksi</h5>
-          <div>
-            <CustomDatePicker
-              selected={startDateTransactions}
-              onChange={setStartDateTransactions}
-              placeholder="Start Date"
-            />
-            <CustomDatePicker
-              selected={endDateTransactions}
-              onChange={setEndDateTransactions}
-              placeholder="End Date"
-            />
+    <>
+      <div style={styles.container} className="container">
+        <div style={styles.cardContainer}>
+          <div style={{ ...styles.card, backgroundColor: "red" }}>
+            <i
+              className="fas fa-wallet"
+              style={{ ...styles.cardIcon, borderColor: "red", color: "red" }}
+            ></i>
+            <h3 style={styles.cardTitle} className="mt-5">Semua</h3>
+            <p style={styles.cardValue}>Rp {data.total_transaksi_all}</p>
+          </div>
+          <div style={{ ...styles.card, backgroundColor: "black" }}>
+            <i
+              className="fas fa-shopping-cart"
+              style={{ ...styles.cardIcon, borderColor: "black", color: "black" }}
+            ></i>
+            <h3 style={styles.cardTitle} className="mt-5">Minggu Ini</h3>
+            <p style={styles.cardValue}>Rp {data.total_transaksi_this_week}</p>
+          </div>
+          <div style={{ ...styles.card, backgroundColor: "#ffcc00" }}>
+            <i
+              className="fas fa-sync-alt"
+              style={{ ...styles.cardIcon, borderColor: "#ffcc00", color: "#ffcc00" }}
+            ></i>
+            <h3 style={styles.cardTitle} className="mt-5">Hari ini</h3>
+            <p style={styles.cardValue}>Rp {data.total_transaksi_today}</p>
+          </div>
+          <div style={{ ...styles.card, backgroundColor: "green" }}>
+            <i
+              className="fas fa-calendar-alt"
+              style={{ ...styles.cardIcon, borderColor: "green", color: "green" }}
+            ></i>
+            <h3 style={styles.cardTitle} className="mt-5">Jumlah</h3>
+            <p style={styles.cardValue}>{data.total_transactions_today_count}</p>
           </div>
         </div>
-        <DataTable columns={columns} data={transactions} pagination noDataComponent="Tidak ada transaksi" />
+
       </div>
 
-      {/* Transactions Per Barang */}
-      <div>
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <h5>Daftar Transaksi per Barang</h5>
-          <div>
-            <CustomDatePicker
-              selected={startDateItems}
-              onChange={setStartDateItems}
-              placeholder="Start Date"
-            />
-            <CustomDatePicker
-              selected={endDateItems}
-              onChange={setEndDateItems}
-              placeholder="End Date"
-            />
-          </div>
-        </div>
-        <DataTable columns={itemColumns} data={itemTransactions} pagination noDataComponent="Tidak ada transaksi per barang" />
+      <div className="container mt-5">
+        <Card>
+          <CardBody>
+            <Row>
+              <Col md="12">
+                <h5>Laporan Penjualan Per Bulan</h5>
+                <div style={styles.barChartFilter}>
+                  <div>
+                    <select style={styles.select} value={selectedMonth} onChange={handleMonthChange}>
+                      <option value={1}>Januari</option>
+                      <option value={2}>Februari</option>
+                      <option value={3}>Maret</option>
+                      <option value={4}>April</option>
+                      <option value={5}>Mei</option>
+                      <option value={6}>Juni</option>
+                      <option value={7}>Juli</option>
+                      <option value={8}>Agustus</option>
+                      <option value={9}>September</option>
+                      <option value={10}>Oktober</option>
+                      <option value={11}>November</option>
+                      <option value={12}>Desember</option>
+                    </select>
+                  </div>
+                  <div>
+                    <select style={styles.select} value={selectedYear} onChange={handleYearChange}>
+                      {years.map((year) => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <Bar
+                  data={barChartData}
+                  options={{
+                    responsive: true,
+                    plugins: {
+                      legend: {
+                        position: "top",
+                      },
+                      title: {
+                        display: true,
+                        text: `Total Transaksi Per Hari Dalam Bulan ke ${selectedMonth} tahun ${selectedYear} : ${totalBulan}`,
+                      },
+                    },
+                    scales: {
+                      x: {
+                        beginAtZero: true,
+                        title: {
+                          display: true,
+                          text: 'Tanggal',
+                        },
+                      },
+                      y: {
+                        beginAtZero: true,
+                        title: {
+                          display: true,
+                          text: 'Total Transaksi',
+                        },
+                      },
+                    },
+                  }}
+                />
+
+              </Col>
+            </Row>
+          </CardBody>
+        </Card>
       </div>
-    </Container>
+
+      <div className="container mt-4">
+        <Card>
+          <CardBody>
+            <DataTable
+              title="Data Transaksi Per Hari"
+              columns={tableColumns}
+              data={filteredTransactions}
+              pagination
+              highlightOnHover
+              striped
+              subHeader
+              subHeaderComponent={
+
+                <div className="d-flex justify-content-between align-items-center" style={{ width: "100%" }}>
+                  <div>
+                    <Input
+                      type="text"
+                      placeholder="Cari . . . . . "
+                      value={searchTerm}
+                      onChange={handleSearch}
+                    />
+                  </div>
+
+                  <div>
+                    <DatePicker
+                      selected={selectedDate}
+                      onChange={(date) => setSelectedDate(date.toISOString().split("T")[0])}
+                    />
+                  </div>
+                </div>
+              }
+            />
+          </CardBody>
+        </Card>
+
+      </div>
+    </>
   );
 };
 

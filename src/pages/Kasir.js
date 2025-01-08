@@ -1,29 +1,26 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import useAxios from '../hooks/useAxios'; // Import useAxios
-import { Container, Row, Col, Card, CardBody, CardTitle, CardImg, Button, ListGroup, ListGroupItem, Input, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap';
-import { AiOutlineDelete } from 'react-icons/ai'; // Import trash icon from react-icons
+import useAxios from '../hooks/useAxios';
+import { Container, Row, Col, Card, CardBody, CardTitle, CardImg, Button, ListGroup, ListGroupItem, Input } from 'reactstrap';
+import { AiOutlineDelete } from 'react-icons/ai';
 
 const Kasir = () => {
     const [cart, setCart] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [modalOpen, setModalOpen] = useState(false);
     const [payment, setPayment] = useState('');
     const [change, setChange] = useState(null);
 
-    const api = useAxios(); // Get the axios instance from useAxios
+    const api = useAxios();
 
-    // Fetch products using useQuery with Axios (Updated to v5 format)
     const { data: products, isLoading, isError } = useQuery({
-        queryKey: ['products'], // The unique key for the query
+        queryKey: ['products'],
         queryFn: async () => {
-            const response = await api.get('/products_active'); // Use your endpoint
+            const response = await api.get('/products_active');
             return response.data.data;
         },
-        retry: 2, // Optional: Retry fetching on failure
+        retry: 2,
     });
 
-    // Add to cart logic
     const addToCart = (product) => {
         setCart((prevCart) => {
             const existingProduct = prevCart.find((item) => item.id === product.id);
@@ -41,6 +38,21 @@ const Kasir = () => {
         setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
     };
 
+    const decreaseQuantity = (productId) => {
+        setCart((prevCart) => {
+            return prevCart.map((item) => {
+                if (item.id === productId) {
+                    if (item.quantity > 1) {
+                        return { ...item, quantity: item.quantity - 1 };
+                    } else {
+                        return null;
+                    }
+                }
+                return item;
+            }).filter(Boolean);
+        });
+    };
+
     const calculateTotal = () => {
         return cart.reduce((total, item) => total + item.harga_jual * item.quantity, 0);
     };
@@ -49,23 +61,13 @@ const Kasir = () => {
         product.nama.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleNumberClick = (num) => {
-        setPayment((prevPayment) => prevPayment * 10 + num);
-    };
-
-    const handleDelete = () => {
-        setPayment(Math.floor(payment / 10));
-    };
-
     const simpanTransaksi = async () => {
         try {
-            // Periksa apakah keranjang kosong
             if (cart.length === 0) {
                 alert('Keranjang belanja kosong! Tambahkan produk terlebih dahulu.');
                 return;
             }
-    
-            // Format data transaksi
+
             const transactionData = {
                 products: cart.map((item) => ({
                     id: item.id,
@@ -73,14 +75,10 @@ const Kasir = () => {
                     quantity: item.quantity,
                 })),
             };
-    
-            // Simpan transaksi ke API
+
             const response = await api.post('/transactions', transactionData);
-    
-            // Tampilkan pesan sukses
+
             alert(`Transaksi berhasil disimpan dengan ID: ${response.data.transaction_id}`);
-    
-            // Reset keranjang dan pembayaran
             setCart([]);
             setPayment('');
             setChange(null);
@@ -89,13 +87,12 @@ const Kasir = () => {
             alert('Gagal menyimpan transaksi. Silakan coba lagi.');
         }
     };
-    
-    // Update the change based on payment amount
+
     React.useEffect(() => {
         const total = calculateTotal();
         if (payment && payment >= total) {
             setChange(payment - total);
-        } 
+        }
     }, [payment]);
 
     if (isLoading) {
@@ -126,21 +123,25 @@ const Kasir = () => {
                         <Row className="w-100">
                             {filteredProducts.map((product) => (
                                 <Col key={product.id} md="3" lg="3" sm="4" xs="6" className="mb-4">
-                                    <Card style={styles.card} onClick={() => addToCart(product)}>
-                                        <CardImg 
-                                            top 
-                                            width="100%" 
-                                            src={`${process.env.REACT_APP_BASE_URL}storage/${product.gambar}`} 
-                                            alt={product.nama} 
-                                            style={styles.cardImage} 
+                                    <Card style={styles.card}  onClick={() => addToCart(product)}>
+                                        <CardImg
+                                            top
+                                            width="100%"
+                                            src={`${process.env.REACT_APP_BASE_URL}storage/${product.gambar}`}
+                                            alt={product.nama}
+                                            style={styles.cardImage}
                                         />
-                                        <CardBody>
+                                        <CardBody style={styles.cardBody}>
                                             <CardTitle tag="h5" style={styles.cardTitle}>
-                                                {product.nama.length > 20 ? `${product.nama.substring(0, 20)}...` : product.nama}
+                                                {product.nama}
                                             </CardTitle>
-                                            <p>Rp {Number(product.harga_jual).toLocaleString()}</p>
-                                            <Button style={styles.button} block>
-                                                Tambah
+                                            <Button
+                                                style={styles.priceButton}
+                                                size='sm'
+                                                block
+                                               
+                                            >
+                                                Rp {Number(product.harga_jual).toLocaleString()}
                                             </Button>
                                         </CardBody>
                                     </Card>
@@ -161,14 +162,24 @@ const Kasir = () => {
                                             <span>{item.nama} (x{item.quantity})</span>
                                             <span>Rp {(item.harga_jual * item.quantity).toLocaleString()}</span>
                                         </div>
-                                        <Button 
-                                            color="danger" 
-                                            size="sm" 
-                                            onClick={() => removeFromCart(item.id)}
-                                            style={styles.removeButton}
-                                        >
-                                            <AiOutlineDelete size={20} />
-                                        </Button>
+                                        <div className="d-flex">
+                                            <Button
+                                                color="warning"
+                                                size="sm"
+                                                onClick={() => decreaseQuantity(item.id)}
+                                                style={styles.removeButton}
+                                            >
+                                                -
+                                            </Button>
+                                            <Button
+                                                color="danger"
+                                                size="sm"
+                                                onClick={() => removeFromCart(item.id)}
+                                                style={styles.removeButton}
+                                            >
+                                                <AiOutlineDelete size={20} />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </ListGroupItem>
                             ))}
@@ -183,8 +194,6 @@ const Kasir = () => {
                     </div>
                 </Col>
             </Row>
-
-            
         </Container>
     );
 };
@@ -201,19 +210,32 @@ const styles = {
         boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
         textAlign: 'center',
         backgroundColor: '#fff',
-        cursor: 'pointer',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
     },
     cardImage: {
         height: '110px',
         objectFit: 'cover',
     },
+    cardBody: {
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        flexGrow: 1,
+    },
     cardTitle: {
+        fontSize: '14px',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        whiteSpace: 'normal',
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        marginBottom: '10px',
     },
-    button: {
-        marginTop: '10px',
+    priceButton: {
+        marginTop: 'auto',
         borderRadius: '20px',
         backgroundColor: '#28a745',
         borderColor: '#28a745',
@@ -229,14 +251,7 @@ const styles = {
         padding: '10px',
     },
     removeButton: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: '40px',
-        height: '40px',
-        borderRadius: '50%',
-        backgroundColor: '#dc3545',
-        color: 'white',
+        marginLeft: '5px',
     },
     total: {
         marginTop: '10px',
@@ -245,47 +260,6 @@ const styles = {
     productListWrapper: {
         overflowY: 'auto',
         maxHeight: 'calc(100vh - 160px)',
-    },
-    changeWrapper: {
-        marginTop: '10px',
-        fontWeight: 'bold',
-        color: '#28a745',
-    },
-    calculator: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gridGap: '10px',
-        marginTop: '20px',
-    },
-    numButton: {
-        fontSize: '20px',
-        padding: '20px',
-        borderRadius: '5px',
-        height: '60px',
-        minWidth: '60px',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    numButtonLarge: {
-        fontSize: '20px',
-        padding: '20px',
-        borderRadius: '5px',
-        height: '60px',
-        minWidth: '130px',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    paymentInput: {
-        fontSize: '28px',
-        fontWeight: 'bold',
-        textAlign: 'center',
-        padding: '15px',
-        marginBottom: '20px',
-        backgroundColor: '#f1f1f1',
-        borderRadius: '10px',
-        border: '1px solid #ccc',
     },
 };
 

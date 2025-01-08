@@ -6,13 +6,14 @@ import Dashboard from '../pages/Dashboard';
 import Kasir from '../pages/Kasir';
 import LoginForm from '../pages/LoginForm';
 import ProductListPage from '../pages/ProductListPage';
+import SalesReportPage from '../pages/SalesReportPage';
 import NavbarComponent from '../layout/NavbarComponent';
 
 const Routes = () => {
   const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [nama, setNama]= useState('');
+  const [nama, setNama] = useState('');
 
   // Fungsi untuk mengambil role dari API
   const fetchUserRole = async () => {
@@ -71,7 +72,7 @@ const Routes = () => {
     // Jika semua kondisi lulus, tampilkan halaman yang diminta
     return (
       <>
-        <NavbarComponent userName={nama} /> {/* Tambahkan Navbar */}
+        <NavbarComponent userName={nama} /> 
         {children}
       </>
     );
@@ -80,7 +81,7 @@ const Routes = () => {
   return (
     <R>
       <Route path="/login" element={<LoginForm />} />
-      {/* <Route path="/" element={<Dashboard />} /> */}
+      <Route path="/" element={<Dashboard />} />
 
       {/* Halaman hanya untuk Admin */}
       <Route
@@ -104,6 +105,15 @@ const Routes = () => {
         element={
           <ProtectedRoute role="admin">
             <ProductListPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/laporan"
+        element={
+          <ProtectedRoute role="admin">
+            <SalesReportPage />
           </ProtectedRoute>
         }
       />
