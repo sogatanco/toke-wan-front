@@ -38,7 +38,7 @@ const SalesReportPage = () => {
     datasets: [],
   });
 
-  const [selectedMonth, setSelectedMonth] = useState(1);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
 
   const [transactions, setTransactions] = useState([]);
@@ -49,6 +49,8 @@ const SalesReportPage = () => {
   const api = useAxios();
 
   useEffect(() => {
+    setTransactions([]);
+    setFilteredTransactions([]);
     const fetchData = async () => {
       try {
         const response = await api.get('total-all');
@@ -135,10 +137,10 @@ const SalesReportPage = () => {
       padding: "20px",
       borderRadius: "10px",
       flex: 1,
-      margin: "10px",
       textAlign: "center",
       boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
       overflow: "visible",
+      minHeight: "200px", // Tinggi minimal agar konsisten
     },
     cardIcon: {
       position: "absolute",
@@ -153,8 +155,9 @@ const SalesReportPage = () => {
       padding: "15px",
     },
     cardTitle: {
-      fontSize: "1.5rem",
+      fontSize: "1.2rem",
       margin: "10px 0",
+      fontWeight: "bold",
     },
     cardValue: {
       fontSize: "1.2rem",
@@ -201,16 +204,16 @@ const SalesReportPage = () => {
 
   const tableColumns = [
     {
-      name: "Waktu Transaksi", selector: (row) =>(
-      
-        `${new Date(row.created_at).toLocaleDateString("id-ID", {
-        weekday: 'long',  // Menampilkan nama hari (Senin, Selasa, dst)
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      })} ${new Date(row.created_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}`
-        
-      ) , sortable: true
+      name: "Waktu Transaksi", selector: (row) => (
+        `${new Date(row.created_at).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}`
+
+      ), sortable: true
+    },
+    {
+      name: "Tanggal Transaksi", selector: (row) => (
+        `${new Date(row.created_at).toLocaleDateString("id-ID", { day: '2-digit', month: '2-digit' })}`
+
+      ), sortable: true
     },
     { name: "Nama Produk", selector: (row) => row.product_name, sortable: true },
     { name: "Quantity", selector: (row) => row.jumlah_produk, sortable: true },
@@ -220,45 +223,53 @@ const SalesReportPage = () => {
 
   return (
     <>
-      <div style={styles.container} className="container">
-        <div style={styles.cardContainer}>
-          <div style={{ ...styles.card, backgroundColor: "red" }}>
-            <i
-              className="fas fa-wallet"
-              style={{ ...styles.cardIcon, borderColor: "red", color: "red" }}
-            ></i>
-            <h3 style={styles.cardTitle} className="mt-5">Semua</h3>
-            <p style={styles.cardValue}>Rp {data.total_transaksi_all}</p>
-          </div>
-          <div style={{ ...styles.card, backgroundColor: "black" }}>
-            <i
-              className="fas fa-shopping-cart"
-              style={{ ...styles.cardIcon, borderColor: "black", color: "black" }}
-            ></i>
-            <h3 style={styles.cardTitle} className="mt-5">Minggu Ini</h3>
-            <p style={styles.cardValue}>Rp {data.total_transaksi_this_week}</p>
-          </div>
-          <div style={{ ...styles.card, backgroundColor: "#ffcc00" }}>
-            <i
-              className="fas fa-sync-alt"
-              style={{ ...styles.cardIcon, borderColor: "#ffcc00", color: "#ffcc00" }}
-            ></i>
-            <h3 style={styles.cardTitle} className="mt-5">Hari ini</h3>
-            <p style={styles.cardValue}>Rp {data.total_transaksi_today}</p>
-          </div>
-          <div style={{ ...styles.card, backgroundColor: "green" }}>
-            <i
-              className="fas fa-calendar-alt"
-              style={{ ...styles.cardIcon, borderColor: "green", color: "green" }}
-            ></i>
-            <h3 style={styles.cardTitle} className="mt-5">Jumlah</h3>
-            <p style={styles.cardValue}>{data.total_transactions_today_count}</p>
-          </div>
-        </div>
-
+      <div className="container-fluid mt-5">
+        <Row className="g-3">
+          <Col xs="12" sm="6" md="3">
+            <div style={{ ...styles.card, backgroundColor: "red" }}>
+              <i
+                className="fas fa-wallet"
+                style={{ ...styles.cardIcon, borderColor: "red", color: "red" }}
+              ></i>
+              <h3 style={styles.cardTitle} className="mt-5">Semua</h3>
+              <p style={styles.cardValue}>Rp {data.total_transaksi_all}</p>
+            </div>
+          </Col>
+          <Col xs="12" sm="6" md="3">
+            <div style={{ ...styles.card, backgroundColor: "black" }}>
+              <i
+                className="fas fa-shopping-cart"
+                style={{ ...styles.cardIcon, borderColor: "black", color: "black" }}
+              ></i>
+              <h3 style={styles.cardTitle} className="mt-5">Minggu Ini</h3>
+              <p style={styles.cardValue}>Rp {data.total_transaksi_this_week}</p>
+            </div>
+          </Col>
+          <Col xs="12" sm="6" md="3">
+            <div style={{ ...styles.card, backgroundColor: "#ffcc00" }}>
+              <i
+                className="fas fa-sync-alt"
+                style={{ ...styles.cardIcon, borderColor: "#ffcc00", color: "#ffcc00" }}
+              ></i>
+              <h3 style={styles.cardTitle} className="mt-5">Hari ini</h3>
+              <p style={styles.cardValue}>Rp {data.total_transaksi_today}</p>
+            </div>
+          </Col>
+          <Col xs="12" sm="6" md="3">
+            <div style={{ ...styles.card, backgroundColor: "green" }}>
+              <i
+                className="fas fa-calendar-alt"
+                style={{ ...styles.cardIcon, borderColor: "green", color: "green" }}
+              ></i>
+              <h3 style={styles.cardTitle} className="mt-5">Jumlah</h3>
+              <p style={styles.cardValue}>{data.total_transactions_today_count}</p>
+            </div>
+          </Col>
+        </Row>
       </div>
 
-      <div className="container mt-5">
+
+      <div className="container-fluid mt-5">
         <Card>
           <CardBody>
             <Row>
@@ -327,7 +338,7 @@ const SalesReportPage = () => {
         </Card>
       </div>
 
-      <div className="container mt-4">
+      <div className="container-fluid mt-4">
         <Card>
           <CardBody>
             <DataTable
